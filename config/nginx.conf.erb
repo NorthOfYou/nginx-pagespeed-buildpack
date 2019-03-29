@@ -10,8 +10,11 @@ events {
 
 http {
         gzip on;
-        gzip_comp_level 2;
+        gzip_comp_level 6;
         gzip_min_length 512;
+	gzip_types text/plain text/html text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
+	gzip_vary on;
+	gzip_proxied any;
 
 	server_tokens off;
 
@@ -43,6 +46,15 @@ http {
 			proxy_pass http://app_server;
 		}
 
+		location ^~ /blog {
+			proxy_set_header X-Real-IP $remote_addr;
+			proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+			proxy_set_header Host $http_host;
+			proxy_set_header X-NginX-Proxy true;
+			proxy_pass http://104.236.26.219:2368/blog;
+			proxy_redirect off;
+		}
+
 		pagespeed on;
 
 		# Needs to exist and be writable by nginx.  Use tmpfs for best performance.
@@ -51,9 +63,26 @@ http {
 		# Ensure requests for pagespeed optimized resources go to the pagespeed handler
 		# and no extraneous headers get set.
 		location ~ "\.pagespeed\.([a-z]\.)?[a-z]{2}\.[^.]{10}\.[^.]+" {
-		add_header "" "";
+			add_header "" "";
 		}
 		location ~ "^/pagespeed_static/" { }
 		location ~ "^/ngx_pagespeed_beacon$" { }
+
+		# enable CoreFilters
+		pagespeed RewriteLevel CoreFilters;
+
+		# resize_rendered_image_dimensions
+		pagespeed EnableFilters responsive_images,inline_images,resize_images,rewrite_style_attributes_with_url,rewrite_css,prioritize_critical_css,make_google_analytics_async,inline_google_font_css,local_storage_cache,inline_preview_images,resize_mobile_images,remove_comments,collapse_whitespace,elide_attributes,add_instrumentation,defer_javascript,in_place_optimize_for_browser;
+
+		# pagespeed ImageRecompressionQuality 90;
+
+		# pagespeed Statistics on;
+		# pagespeed StatisticsLogging on;
+		# pagespeed LogDir /var/log/pagespeed;
+		# pagespeed AdminPath /pagespeed_admin;
+		#
+		# location ~ ^/pagespeed_admin {
+		#   allow all;
+		# }
 	}
 }
