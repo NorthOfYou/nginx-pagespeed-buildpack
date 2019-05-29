@@ -79,10 +79,10 @@ http {
 		# pagespeed Statistics on;
 		# pagespeed StatisticsLogging on;
 		# pagespeed LogDir /var/log/pagespeed;
-		# pagespeed AdminPath /pagespeed_admin;
-		#
-		# location ~ ^/pagespeed_admin {
-		#   allow all;
-		# }
+		pagespeed AdminPath /pagespeed_admin_RgYrNHmLRPef;
+		
+		location ~ ^/pagespeed_admin_RgYrNHmLRPef {
+		  allow all;
+		}
 	}
 }
