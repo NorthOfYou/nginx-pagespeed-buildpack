@@ -94,6 +94,7 @@ http {
 		pagespeed EnableFilters add_instrumentation;
 		pagespeed EnableFilters defer_javascript;
 		pagespeed EnableFilters in_place_optimize_for_browser;
+		pagespeed EnableFilters lazyload_images;
 		# pagespeed EnableFilters rewrite_domains;
 		
 		location ~ "\.pagespeed\.([a-z]\.)?[a-z]{2}\.[^.]{10}\.[^.]+" {
