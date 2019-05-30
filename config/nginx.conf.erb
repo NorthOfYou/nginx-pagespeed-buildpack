@@ -76,9 +76,11 @@ http {
 
 		# pagespeed BlockingFetchTimeoutMs 10000
 
+		pagespeed Domain https://witharsenal.com;
 		pagespeed Domain https://witharsenal-pr-38.herokuapp.com;
 		# pagespeed MapRewriteDomain https://d288blwc9kbrw2.cloudfront.net https://witharsenal-pr-38.herokuapp.com;
-		pagespeed MapOriginDomain https://d288blwc9kbrw2.cloudfront.net https://witharsenal-pr-38.herokuapp.com;
+		# pagespeed MapOriginDomain https://d288blwc9kbrw2.cloudfront.net https://witharsenal-pr-38.herokuapp.com;
+		pagespeed MapOriginDomain https://witharsenal-pr-38.herokuapp.com https://d288blwc9kbrw2.cloudfront.net;
 
 		# pagespeed ImageRecompressionQuality 90;
 
