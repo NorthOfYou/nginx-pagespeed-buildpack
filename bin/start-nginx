@@ -24,7 +24,7 @@ echo 'buildpack=nginx at=logs-initialized'
 #Start log redirection.
 (
     # Redirect NGINX logs to stdout.
-    tail -qF -n 0 logs/nginx/*.log
+    tail -qF -n 0 logs/nginx/*.log /app/var/log/pagespeed/*
     echo 'logs' >$psmgr
 ) &
 
