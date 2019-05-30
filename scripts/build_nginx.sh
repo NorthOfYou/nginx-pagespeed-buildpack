@@ -1,19 +1,19 @@
 #!/bin/bash
-# Build NGINX and modules on Heroku.
-# This program is designed to run in a web dyno provided by Heroku.
-# We would like to build an NGINX binary for the builpack on the
-# exact machine in which the binary will run.
-# Our motivation for running in a web dyno is that we need a way to
-# download the binary once it is built so we can vendor it in the buildpack.
-#
-# Once the dyno is 'up' you can open your browser and navigate
-# this dyno's directory structure to download the nginx binary.
 
-NGINX_VERSION=${NGINX_VERSION-1.16.0}
-NPS_VERSION=${NPS_VERSION-1.13.35.2}
+NGINX_VERSION=${NGINX_VERSION-1.15.8}
+HEADERS_MORE_VERSION=${HEADERS_MORE_VERSION-0.33}
+NPS_VERSION=${NGINX_PAGE_SPEED_VERSION-1.13.35.2}
+PCRE_VERSION=${PCRE_VERSION-8.42}
+ZLIB_VERSION=${ZLIB_VERSION-1.2.11}
 
 nginx_tarball_url=http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz
-nps_url=https://github.com/pagespeed/ngx_pagespeed/archive/v${NPS_VERSION}-beta.tar.gz
+headers_more_nginx_module_url=https://github.com/openresty/headers-more-nginx-module/archive/v${HEADERS_MORE_VERSION}.tar.gz
+nginx_page_speed_url=https://github.com/apache/incubator-pagespeed-ngx/archive/v${NPS_VERSION}-stable.tar.gz
+psol_url=https://dl.google.com/dl/page-speed/psol/${NPS_VERSION}-x64.tar.gz
+pcre_tarball_url=http://iweb.dl.sourceforge.net/project/pcre/pcre/${PCRE_VERSION}/pcre-${PCRE_VERSION}.tar.bz2
+zlib_url=http://zlib.net/zlib-${ZLIB_VERSION}.tar.gz
+
+set -e
 
 temp_dir=$(mktemp -d /tmp/nginx.XXXXXXXXXX)
 
@@ -25,33 +25,40 @@ cd $temp_dir
 echo "Temp dir: $temp_dir"
 
 echo "Downloading $nginx_tarball_url"
-curl -L $nginx_tarball_url | tar xz
+curl --silent -L $nginx_tarball_url | tar xzv
 
-echo "Downloading $nps_url"
-(
-  cd nginx-${NGINX_VERSION} && curl -L $nps_url | tar xz
-  cd ngx_pagespeed-${NPS_VERSION}-beta/
-  psol_url=https://dl.google.com/dl/page-speed/psol/${NPS_VERSION}.tar.gz
-  [ -e scripts/format_binary_url.sh ] && psol_url=$(scripts/format_binary_url.sh PSOL_BINARY_URL)
-  echo "Downloading $psol_url"
-  wget ${psol_url}
-  tar -xzf $(basename ${psol_url})
-)
+echo "Downloading $pcre_tarball_url"
+(cd nginx-${NGINX_VERSION} && curl --silent -L $pcre_tarball_url | tar xvj )
+
+echo "Downloading $headers_more_nginx_module_url"
+(cd nginx-${NGINX_VERSION} && curl --silent -L $headers_more_nginx_module_url | tar xvz)
+
+echo "Downloading $zlib_url"
+(cd nginx-${NGINX_VERSION} && curl --silent -L $zlib_url | tar xvz )
+
+echo "Downloading $nginx_page_speed_url"
+(cd nginx-${NGINX_VERSION} && curl --silent -L $nginx_page_speed_url | tar xvz )
+
+echo "Downloading $psol_url"
+(cd nginx-${NGINX_VERSION}/incubator-pagespeed-ngx-${NPS_VERSION}-stable && curl --silent -L $psol_url | tar xvz)
+
+echo "Installing uuid-dev"
+apt-get update && apt-get install -y uuid-dev libperl-dev
 
 (
   cd nginx-${NGINX_VERSION}
   ./configure \
-    --prefix=/tmp/nginx \
-    --add-module=${temp_dir}/nginx-${NGINX_VERSION}/ngx_pagespeed-${NPS_VERSION}-beta \
+    --with-pcre=pcre-${PCRE_VERSION} \
+    --with-zlib=zlib-${ZLIB_VERSION} \
     --with-http_gzip_static_module \
-    --with-cc-opt='-g -O2 -fstack-protector --param=ssp-buffer-size=4 -Wformat -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2' \
-    --with-ld-opt='-Wl,-Bsymbolic-functions -Wl,-z,relro -Wl,--as-needed' 
-
+    --with-http_realip_module \
+    --with-http_ssl_module \
+    --with-http_v2_module \
+    --prefix=/tmp/nginx \
+    --add-module=${temp_dir}/nginx-${NGINX_VERSION}/headers-more-nginx-module-${HEADERS_MORE_VERSION} \
+    --add-module=${temp_dir}/nginx-${NGINX_VERSION}/incubator-pagespeed-ngx-${NPS_VERSION}-stable
+  make
   make install
 )
 
-while true
-do
-  sleep 1
-  echo "."
-done
+cp /tmp/nginx/sbin/nginx $1
