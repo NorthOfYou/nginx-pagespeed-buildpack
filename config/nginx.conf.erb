@@ -4,28 +4,37 @@ worker_processes <%= ENV['NGINX_WORKERS'] || 4 %>;
 events {
 	use epoll;
 	accept_mutex on;
-	worker_connections 1024;
+	worker_connections <%= ENV['NGINX_WORKER_CONNECTIONS'] || 1024 %>;
 }
 
 http {
     gzip on;
     gzip_comp_level 6;
     gzip_min_length 512;
-	gzip_types text/plain text/html text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
 	gzip_vary on;
 	gzip_proxied any;
+	gzip_types
+		text/plain
+		text/html
+		text/css
+		application/json
+		application/javascript
+		text/xml
+		application/xml
+		application/xml+rss
+		text/javascript
+		image/svg+xml;
 
 	server_tokens off;
 
 	log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
-	access_log logs/nginx/access.log l2met;
-	error_log logs/nginx/error.log;
+	access_log <%= ENV['NGINX_ACCESS_LOG_PATH'] || 'logs/nginx/access.log' %> l2met;
+	error_log <%= ENV['NGINX_ERROR_LOG_PATH'] || 'logs/nginx/error.log' %>;
 
 	include mime.types;
 	default_type application/octet-stream;
 	sendfile on;
 
-	#Must read the body in 5 seconds.
 	client_body_timeout <%= ENV['NGINX_CLIENT_BODY_TIMEOUT'] || 5 %>;
 
 	upstream app_server {
@@ -36,7 +45,7 @@ http {
 		listen <%= ENV["PORT"] %>;
 		server_name _;
 		keepalive_timeout 5;
-		client_max_body_size <%= ENV['NGINX_CLIENT_MAX_BODY_SIZE'] || 1 %>M;
+		# client_max_body_size <%= ENV['NGINX_CLIENT_MAX_BODY_SIZE'] || 1 %>M;
 
 		location / {
 			proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -55,40 +64,45 @@ http {
 		}
 
 		pagespeed on;
-
-		# Needs to exist and be writable by nginx.  Use tmpfs for best performance.
+		pagespeed Statistics on;
+		pagespeed StatisticsLogging on;
+		pagespeed LogDir /app/var/log/pagespeed;
 		pagespeed FileCachePath /app/var/ngx_pagespeed_cache;
+		# pagespeed BlockingFetchTimeoutMs 10000
+		pagespeed Domain https://witharsenal.com;
+		pagespeed Domain https://witharsenal-pr-38.herokuapp.com;
+		pagespeed Domain https://d288blwc9kbrw2.cloudfront.net;
+		# pagespeed MapRewriteDomain https://d288blwc9kbrw2.cloudfront.net https://witharsenal-pr-38.herokuapp.com;
+		# pagespeed MapOriginDomain https://d288blwc9kbrw2.cloudfront.net https://witharsenal-pr-38.herokuapp.com;
+		# pagespeed MapOriginDomain https://witharsenal-pr-38.herokuapp.com https://d288blwc9kbrw2.cloudfront.net;
 
-		# Ensure requests for pagespeed optimized resources go to the pagespeed handler
-		# and no extraneous headers get set.
+		pagespeed RewriteLevel CoreFilters;
+		pagespeed EnableFilters responsive_images;
+		pagespeed EnableFilters inline_images;
+		pagespeed EnableFilters resize_images;
+		pagespeed EnableFilters rewrite_style_attributes_with_url;
+		pagespeed EnableFilters rewrite_css;
+		pagespeed EnableFilters prioritize_critical_css;
+		pagespeed EnableFilters make_google_analytics_async;
+		pagespeed EnableFilters inline_google_font_css;
+		pagespeed EnableFilters local_storage_cache;
+		pagespeed EnableFilters inline_preview_images;
+		pagespeed EnableFilters resize_mobile_images;
+		pagespeed EnableFilters remove_comments;
+		pagespeed EnableFilters collapse_whitespace;
+		pagespeed EnableFilters elide_attributes;
+		pagespeed EnableFilters add_instrumentation;
+		pagespeed EnableFilters defer_javascript;
+		pagespeed EnableFilters in_place_optimize_for_browser;
+		# pagespeed EnableFilters rewrite_domains;
+		
 		location ~ "\.pagespeed\.([a-z]\.)?[a-z]{2}\.[^.]{10}\.[^.]+" {
 			add_header "" "";
 		}
 		location ~ "^/pagespeed_static/" { }
 		location ~ "^/ngx_pagespeed_beacon$" { }
-
-		# enable CoreFilters
-		pagespeed RewriteLevel CoreFilters;
-
-
-		# resize_rendered_image_dimensions
-		pagespeed EnableFilters responsive_images,inline_images,resize_images,rewrite_style_attributes_with_url,rewrite_css,prioritize_critical_css,make_google_analytics_async,inline_google_font_css,local_storage_cache,inline_preview_images,resize_mobile_images,remove_comments,collapse_whitespace,elide_attributes,add_instrumentation,defer_javascript,in_place_optimize_for_browser;
-
-		# pagespeed BlockingFetchTimeoutMs 10000
-
-		pagespeed Domain https://witharsenal.com;
-		pagespeed Domain https://witharsenal-pr-38.herokuapp.com;
-		# pagespeed MapRewriteDomain https://d288blwc9kbrw2.cloudfront.net https://witharsenal-pr-38.herokuapp.com;
-		# pagespeed MapOriginDomain https://d288blwc9kbrw2.cloudfront.net https://witharsenal-pr-38.herokuapp.com;
-		pagespeed MapOriginDomain https://witharsenal-pr-38.herokuapp.com https://d288blwc9kbrw2.cloudfront.net;
-
-		# pagespeed ImageRecompressionQuality 90;
-
-		pagespeed Statistics on;
-		pagespeed StatisticsLogging on;
-		pagespeed LogDir /app/var/log/pagespeed;
-		pagespeed AdminPath /pagespeed_admin_RgYrNHmLRPef;
 		
+		pagespeed AdminPath /pagespeed_admin_RgYrNHmLRPef;
 		location ~ ^/pagespeed_admin_RgYrNHmLRPef {
 		  allow all;
 		}
