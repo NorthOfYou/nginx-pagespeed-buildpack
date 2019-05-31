@@ -75,6 +75,8 @@ http {
 		pagespeed Domain https://witharsenal-pr-38.herokuapp.com;
 		pagespeed Domain https://d288blwc9kbrw2.cloudfront.net;
 
+    pagespeed MapOriginDomain localhost d288blwc9kbrw2.cloudfront.net;
+
 		pagespeed RewriteLevel CoreFilters;
 		pagespeed EnableFilters responsive_images;
 		pagespeed EnableFilters inline_images;
@@ -94,13 +96,13 @@ http {
 		pagespeed EnableFilters defer_javascript;
 		pagespeed EnableFilters in_place_optimize_for_browser;
 		pagespeed EnableFilters lazyload_images;
-		
+
 		location ~ "\.pagespeed\.([a-z]\.)?[a-z]{2}\.[^.]{10}\.[^.]+" {
 			add_header "" "";
 		}
 		location ~ "^/pagespeed_static/" { }
 		location ~ "^/ngx_pagespeed_beacon$" { }
-		
+
 		pagespeed AdminPath /pagespeed_admin_RgYrNHmLRPef;
 		location ~ ^/pagespeed_admin_RgYrNHmLRPef {
 		  allow all;
